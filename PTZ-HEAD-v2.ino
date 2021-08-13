@@ -20,8 +20,15 @@ StepControl stepController;
 
 #define stepsPerRevolutionX 200*6*4
 
+
+//! test vars below
+
+long long lastRecieve = 0;
+
 void setup()
 {
+
+  Serial.begin(115200);
 
   motorX
     .setAcceleration(1000)
@@ -47,15 +54,22 @@ void setup()
 void loop()
 {
 
-  motorX.setTargetAbs(1000);  // Set target position to 1000 steps from current position
+  if (Serial.available()) {
+
+    String inData;
+    char outData[32];
+
+    inData = Serial.readStringUntil('\n');
+    lastRecieve = millis();
+  }
 
 
-  stepController.move(motorX);    // Do the move
+  if (lastRecieve + 150 > millis()){
+    digitalWrite(fan1Pin, HIGH);
+  }
+  else{
+    digitalWrite(fan1Pin, LOW);
+  }
 
-  delay(1000); // Wait a second
-  
-  motorX.setTargetAbs(-1000);  // Set target position to 1000 steps from current position
-  stepController.move(motorX);    // Do the move
 
-  delay(1000); // Wait a second
 }
