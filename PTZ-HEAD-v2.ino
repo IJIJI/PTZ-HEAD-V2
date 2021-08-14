@@ -1,7 +1,12 @@
 #include "Arduino.h"
+
 #include "TeensyStep.h"
 
+#include <SPI.h>
+// #include <nRF24L01.h>
+#include <RF24.h>
 
+#include "commands.h"
 
 
 #define fan1Pin PA8
