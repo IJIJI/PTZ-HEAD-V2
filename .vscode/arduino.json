@@ -1,6 +1,6 @@
 {
     "configuration": "pnum=RUMBA32,upload_method=dfuMethod,xserial=generic,usb=CDC,xusb=FS,opt=osstd,rtlib=nano",
     "board": "STMicroelectronics:stm32:3dprinter",
-    "sketch": "PTZ-v2.ino",
+    "sketch": "PTZ-HEAD-v2.ino",
     "port": "COM1"
 }
