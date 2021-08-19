@@ -78,3 +78,39 @@ void loop()
 
 
 }
+
+
+
+//? RS485 Protocol
+
+byte remove255(byte inVal){
+  if (inVal >= 255)
+    inVal = 254;
+
+  return inVal;
+}
+
+void sendCommandRS(byte camNum, byte command[]){
+
+  byte commandLength = sizeof(command) / sizeof(command[0]);
+  if (commandLength > 11)
+    commandLength = 12;
+  
+  byte message[16];
+  
+  message[0] = remove255(camNum);
+  int totalMessage = message[0];
+  
+  for (int x = 0; x < commandLength; x++){
+    message[x+1] = remove255(command[x]);
+    totalMessage += command[x];
+  }
+
+  message[13] = remove255(totalMessage % 256);
+  message[14] = 0xFF;
+
+
+
+  Serial.write(message, 15);
+
+}
