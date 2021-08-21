@@ -2,6 +2,7 @@
 
 #include "TeensyStep.h"
 
+
 #include <SPI.h>
 // #include <nRF24L01.h>
 #include <RF24.h>
@@ -9,24 +10,25 @@
 #include "commands.h"
 
 
+#define fan0Pin PC9
 #define fan1Pin PA8
-
 
 // Define pin connections & motor's steps per revolution
 #define enXPin PC11
 #define enYPin PE3
 
-Stepper motorX(PA0, PC15);       // STEP pin: PE5, DIR pin: PE6
-// Stepper motorX(PA0, PC15), motorY(PE5, PE6);       // STEP pin: PE5, DIR pin: PE6
+#define stepsPerRevolutionX 200*6*4
+#define stepsPerRevolutionY 200*6*4
+
+
+// Stepper motorX(PA0, PC15);       // STEP pin: PA0, DIR pin: PC15
+// Stepper motorY(PE5, PE6);       // STEP pin: PE5, DIR pin: PE6
+Stepper motorX(PA0, PC15), motorY(PE5, PE6);       // STEPx pin: PA0, DIRx pin: PC15 STEPy pin: PE5, DIRy pin: PE6
 StepControl stepController;
 // RotateControl rotateController;
 
-// TODO swap motor 1 and 2 pins
-
-#define stepsPerRevolutionX 200*6*4
 
 
-//! test vars below
 
 long long lastRecieve = 0;
 
@@ -38,19 +40,24 @@ void setup()
   motorX
     .setAcceleration(1000)
     .setMaxSpeed(15000);
-
+  motorY
+    .setAcceleration(500)
+    .setMaxSpeed(7500);
 
   // Declare pins as Outputs
   pinMode(enXPin, OUTPUT);
   pinMode(enYPin, OUTPUT);
 
+  pinMode(fan0Pin, OUTPUT);
   pinMode(fan1Pin, OUTPUT);
 
   delay(500);
 
   digitalWrite(enXPin, LOW);
   digitalWrite(enYPin, LOW);
+  digitalWrite(fan0Pin, HIGH);
   digitalWrite(fan1Pin, HIGH);
+  // analogWrite(fan0Pin, 255); //TODO fix analogwrite
   // analogWrite(fan1Pin, 255); //TODO fix analogwrite
 
 
@@ -59,12 +66,17 @@ void setup()
 void loop()
 {
 
+  // if (Serial.available()){
+  //   char inData[15];
+  //   Serial.readBytesUntil(0xFF, inData, 14);
+  // }
+
   if (Serial.available()) {
 
     String inData;
     char outData[32];
 
-    inData = Serial.readStringUntil('\n');
+    inData = Serial.readBytesUntil(0xFF);
     lastRecieve = millis();
   }
 
@@ -82,35 +94,3 @@ void loop()
 
 
 //? RS485 Protocol
-
-byte remove255(byte inVal){
-  if (inVal >= 255)
-    inVal = 254;
-
-  return inVal;
-}
-
-void sendCommandRS(byte camNum, byte command[]){
-
-  byte commandLength = sizeof(command) / sizeof(command[0]);
-  if (commandLength > 11)
-    commandLength = 12;
-  
-  byte message[16];
-  
-  message[0] = remove255(camNum);
-  int totalMessage = message[0];
-  
-  for (int x = 0; x < commandLength; x++){
-    message[x+1] = remove255(command[x]);
-    totalMessage += command[x];
-  }
-
-  message[13] = remove255(totalMessage % 256);
-  message[14] = 0xFF;
-
-
-
-  Serial.write(message, 15);
-
-}
