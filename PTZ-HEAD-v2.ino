@@ -4,9 +4,8 @@
 #include "TeensyStep.h"
 
 
-#include <SPI.h>
-// #include <nRF24L01.h>
-#include <RF24.h>
+// #include <SPI.h>
+// #include <RF24.h>
 
 #include "commands.h"
 
@@ -25,9 +24,9 @@
 #define stepsPerRevolutionY 200*6*4
 
 
-// Stepper motorX(PA0, PC15);       // STEP pin: PA0, DIR pin: PC15
-// Stepper motorY(PE5, PE6);       // STEP pin: PE5, DIR pin: PE6
-Stepper* motors[] = { new stepper(PA0, PC15), new stepper(PE5, PE6) }; // STEPx pin: PA0, DIRx pin: PC15 STEPy pin: PE5, DIRy pin: PE6
+Stepper motorX(PA0, PC15);       // STEP pin: PA0, DIR pin: PC15
+Stepper motorY(PE5, PE6);       // STEP pin: PE5, DIR pin: PE6
+// Stepper* motors[] = { new Stepper(PA0, PC15), new Stepper(PE5, PE6) }; // STEPx pin: PA0, DIRx pin: PC15 STEPy pin: PE5, DIRy pin: PE6
 StepControl controllerStep;
 RotateControl controllerRotate0;
 RotateControl controllerRotate1;
@@ -45,8 +44,8 @@ enum headModeEnum {
 
 
 struct headModeStruct{
-  headModeEnum mode = disabled;
-  headModeEnum modeLast = disabled;
+  headModeEnum mode = halted;
+  headModeEnum modeLast = halted;
   uint8_t lastCommand;
   uint8_t prevLastCommand;
 } currentMode;
@@ -66,10 +65,10 @@ void setup()
 
   Serial.begin(115200);
 
-  motors[0]
+  motorX
     .setAcceleration(1000)
     .setMaxSpeed(15000);
-  motors[1]
+  motorY
     .setAcceleration(500)
     .setMaxSpeed(7500);
 
@@ -84,8 +83,8 @@ void setup()
 
   currentMode.mode = standby;
 
-  digitalWrite(enXPin, LOW);
-  digitalWrite(enYPin, LOW);
+  // digitalWrite(enXPin, LOW);
+  // digitalWrite(enYPin, LOW);
   digitalWrite(fan0Pin, HIGH);
   digitalWrite(fan1Pin, HIGH);
   // analogWrite(fan0Pin, 255); //TODO fix analogwrite
@@ -97,21 +96,16 @@ void setup()
 void loop()
 {
 
-  // if (Serial.available()){
-  //   char inData[15];
-  //   Serial.readBytesUntil(0xFF, inData, 14);
-  // }
 
-  uint8_t inDataRS = NULL;
-  uint8_t inDataRF = NULL;
+  uint8_t inDataRS[14] = {NULL};
+  uint8_t inDataRF[14] = {NULL};
 
-  if (inDataRS = receiveCommandRS()){
-    lastRecieveRS = millis();
+
+  if (Serial.available()) {
+    Serial.readBytesUntil(0xFF, inDataRS, 13);
   }
 
-  if (inDataRF = receiveCommandRF()){
-    lastRecieveRF = millis();
-  }
+
 
 // !
 
@@ -119,7 +113,8 @@ void loop()
 
     if(currentMode.modeLast != currentMode.mode){
       controllerStep.emergencyStop();
-      controllerRotate.emergencyStop();
+      controllerRotate0.emergencyStop();
+      controllerRotate1.emergencyStop();
 
       delay(200);
 
@@ -136,13 +131,15 @@ void loop()
 
   else if (currentMode.mode == standby || currentMode.mode == moveJoy || currentMode.mode == movePos){
 
-    if(currentMode.modeLast != currentMode.mode){
+    if(currentMode.modeLast != currentMode.mode && false){
       digitalWrite(enXPin, LOW);
       digitalWrite(enYPin, LOW);
       digitalWrite(fan0Pin, HIGH);
       digitalWrite(fan1Pin, HIGH);
       currentMode.modeLast = currentMode.mode;
     }
+
+  
 
   
     if(inDataRS){
@@ -164,8 +161,8 @@ void loop()
 
     if (currentMode.lastCommand == moveJoy){
       
-      controllerRotate0.rotateAsync(motors[0]);
-      controllerRotate1.rotateAsync(motors[1]);
+      controllerRotate0.rotateAsync(motorX);
+      controllerRotate1.rotateAsync(motorY);
 
       controllerRotate0.overrideSpeed(map(motorSpeeds.speedX, 1, 254, -1, 1));
       controllerRotate1.overrideSpeed(map(motorSpeeds.speedY, 1, 254, -1, 1));
@@ -173,13 +170,21 @@ void loop()
     }
 
     if (currentMode.prevLastCommand == moveJoy && currentMode.lastCommand != moveJoy && currentMode.lastCommand != movePos){
-      motors[0].setTargetAbs(motors[0].getPosition());
-      motors[1].setTargetAbs(motors[1].getPosition());
+      motorX.setTargetAbs(motorX.getPosition());
+      motorY.setTargetAbs(motorY.getPosition());
     }
 
     if (currentMode.lastCommand == movePos){
-      controllerStep.moveAsync(motors);
+      controllerStep.moveAsync(motorX, motorY);
     }
+
+    if (lastRecieveRS + 150 > millis()){
+      digitalWrite(fan1Pin, HIGH);
+    }
+    else{
+      digitalWrite(fan1Pin, LOW);
+    }
+
 
   }
 
@@ -189,7 +194,8 @@ void loop()
 
     if(currentMode.modeLast != currentMode.mode){
       controllerStep.stopAsync();
-      controllerRotate.stopAsync();
+      controllerRotate0.stopAsync();
+      controllerRotate1.stopAsync();
       currentMode.modeLast = currentMode.mode;
     }
 
@@ -197,70 +203,6 @@ void loop()
 
 
 
-
-  // if (currentMode.mode == disabled ){
-
-  //   if(currentMode.modeLast != disabled){
-  //     digitalWrite(enXPin, HIGH);
-  //     digitalWrite(enYPin, HIGH);
-  //     digitalWrite(fan0Pin, LOW);
-  //     digitalWrite(fan1Pin, LOW);
-  //     currentMode.modeLast = currentMode.mode;
-  //   }
-
-
-
-  // }
-  // else if (currentMode.mode == standby || currentMode.mode == movePos || currentMode.mode == moveJoy){
-
-  //   if(currentMode.modeLast != standby && currentMode.modeLast != movePos && currentMode.modeLast != moveJoy){
-  //     digitalWrite(enXPin, LOW);
-  //     digitalWrite(enYPin, LOW);
-  //     digitalWrite(fan0Pin, HIGH);
-  //     digitalWrite(fan1Pin, HIGH);
-  //     currentMode.modeLast = currentMode.mode;
-  //   }
-
-  //   if(inDataRS){
-  //     if (checkSumCheck(inDataRS) && inDataRS[0] == camNum){
-  //       handleInData(inDataRS);
-  //       lastRecieveRS = millis();
-  //     }
-  //   }
-  //   else if (inDataRF && lastRecieveRS + waitTimeRF < millis()){
-
-  //     if (checkSumCheck(inDataRF) && inDataRF[0] == camNum){
-  //       handleInData(inDataRF);
-  //       lastRecieveRF = millis();
-  //     }
-      
-  //   }
-
-
-  // }
-  // else if (currentMode.mode == error){
-
-  // }
-
-
-
-
-
-  // if (Serial.available()) {
-
-  //   uint8_t inData[14];
-
-  //   inData = Serial.readBytesUntil(0xFF);
-  //   lastRecieve = millis();
-  // }
-
-
-  if (lastRecieveRS + 150 > millis()){
-    digitalWrite(fan1Pin, HIGH);
-  }
-  else{
-    digitalWrite(fan1Pin, LOW);
-  }
 
 
 }
@@ -270,16 +212,16 @@ void loop()
 //? RS485 Protocol
 
 
-uint8_t receiveCommandRS(){
+uint8_t* receiveCommandRS(){
   if (Serial.available()) {
-    uint8_t inData[14];
+    uint8_t* inData = new uint8_t[14];
     Serial.readBytesUntil(0xFF, inData, 15);
     return inData;
   }
   return NULL;
 }
 
-uint8_t receiveCommandRF(){
+uint8_t* receiveCommandRF(){
 
   return NULL;
 }
@@ -292,7 +234,11 @@ bool checkSumCheck(uint8_t inData[]){
   }
   checkSum = checkSum % 256;
 
-  if (inData[12] == checkSum){
+  if (checkSum >= 255){
+    checkSum = 254;
+  }
+
+  if (inData[12] == checkSum || true){
     return true;
   }
 
@@ -348,6 +294,10 @@ void writePos(uint8_t posNum){
 
 void callPos(uint8_t posNum){
 
+  if (posNum == 5){
+    currentMode.mode = error;
+  }
+  
 }
 
 void setCoords(uint8_t xPosA, uint8_t xPosB, uint8_t yPosA, uint8_t yPosB, uint8_t zPosA, uint8_t zPosB, uint8_t aPosA, uint8_t aPosB){
