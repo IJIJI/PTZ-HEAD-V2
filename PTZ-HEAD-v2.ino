@@ -10,6 +10,8 @@
 #include "commands.h"
 
 
+// #define debug
+
 
 #define waitTimeRF 1000
 
@@ -64,8 +66,12 @@ struct motorData {
   uint8_t speedZ;
 } motorSpeeds;
 
-unsigned long lastRecieveRS = 0;
-unsigned long lastRecieveRF = 0;
+struct inData {
+  uint8_t data[15] = {NULL};
+  unsigned long lastReceived = 0;
+  bool checksum = false;
+};
+
 
 // HardwareSerial Serial1(PIN_A10, PIN_A9);
 
@@ -113,62 +119,51 @@ void loop()
 {
 
 
-  uint8_t inDataRS[14] = {NULL};
-  uint8_t inDataRF[14] = {NULL};
+  inData inDataRS, inDataRF;
+
+  // uint8_t inDataRS[15] = {NULL};
+  // uint8_t inDataRF[15] = {NULL};
 
 
-  if (Serial1.available()) {
-    Serial1.readBytesUntil(0xFF, inDataRS, 14);
-    Serial.write(inDataRS, 14);
-    Serial1.flush();
-  }
 
-  if (Serial1.available() && false) {
-    // Serial1.readBytesUntil(0xFF, inDataRS, 14);
-    // Serial1.flush();
+
+  if (Serial1.available() >= 14) {
 
     uint8_t writeNum = 0;
     uint8_t lastRecVal = 0;
     while (lastRecVal != 255 && writeNum < 15){
       lastRecVal = Serial1.read();
-      inDataRS[writeNum] = lastRecVal;
+      inDataRS.data[writeNum] = lastRecVal;
       writeNum++;
-      delayMicroseconds(10);
-      digitalWrite(fan3Pin, HIGH);
+
+      #ifdef debug
       Serial.write(lastRecVal);
-      
+      #endif
     }
-    Serial.write(inDataRS, 14);
-    // Serial1.flush();
-    digitalWrite(fan3Pin, LOW);
+
+    if (checkSumCheck(inDataRS.data)) { //todo change if statement to checksum
+      inDataRS.lastReceived = millis();
+      inDataRS.checksum = true;
+    }
+  }
+  //todo add checksum here
+
+
+  if (inDataRS.lastReceived + 1000 > millis() || inDataRF.lastReceived + 1000 > millis()) {
+    digitalWrite(fan1Pin, HIGH);
+  }
+  else{
+    digitalWrite(fan1Pin, LOW);
   }
 
 
 
-// !
 
-  if (currentMode.mode == error){
 
-    if(currentMode.modeLast != currentMode.mode){
-      xAxis.stop();
-      yAxis.stop();
 
-      delay(200);
+  if (currentMode.mode == standby || currentMode.mode == moveJoy || currentMode.mode == movePos){
 
-      digitalWrite(enXPin, HIGH);
-      digitalWrite(enYPin, HIGH);
-      // digitalWrite(fan0Pin, LOW);
-      // digitalWrite(fan1Pin, LOW); //TODO COmment back in!
-      currentMode.modeLast = currentMode.mode;
-    }
-
-  }
-
-// ?
-
-  else if (currentMode.mode == standby || currentMode.mode == moveJoy || currentMode.mode == movePos){
-
-    if(currentMode.modeLast != currentMode.mode && false){
+    if(currentMode.modeLast != currentMode.mode && currentMode.modeLast != standby && currentMode.modeLast != moveJoy && currentMode.modeLast != movePos){ // if mode changed
       digitalWrite(enXPin, LOW);
       digitalWrite(enYPin, LOW);
       digitalWrite(fan0Pin, HIGH);
@@ -176,39 +171,16 @@ void loop()
       currentMode.modeLast = currentMode.mode;
     }
 
-  
 
-  
-    if(inDataRS){
-      if (checkSumCheck(inDataRS) && inDataRS[0] == camNum){
-        handleInData(inDataRS);
-        lastRecieveRS = millis();
-        
-      }
-      else{
-        digitalWrite(fan2Pin, LOW);
-      }
-      
+    if (inDataRS.data && inDataRS.checksum){
+      handleInData(inDataRS.data);
     }
-    else if (inDataRF && lastRecieveRS + waitTimeRF < millis()){
-
-      if (checkSumCheck(inDataRF) && inDataRF[0] == camNum){
-        handleInData(inDataRF);
-        lastRecieveRF = millis();
-      }
-      
+    else if (inDataRF.data && inDataRF.checksum){
+      handleInData(inDataRF.data);
     }
-
-
 
 
     if (currentMode.mode == moveJoy){
-      
-      // controllerRotate0.rotateAsync(motorX);
-      // controllerRotate1.rotateAsync(motorY);
-
-      // controllerRotate0.overrideSpeed(map(motorSpeeds.speedX, 1, 254, -1, 1));
-      // controllerRotate1.overrideSpeed(map(motorSpeeds.speedY, 1, 254, -1, 1));
 
       if (motorSpeeds.speedX == 127){
         xAxis.setSpeed(0);
@@ -229,7 +201,6 @@ void loop()
       xAxis.runSpeed();
       yAxis.runSpeed();
 
-
     }
 
     if (currentMode.prevLastCommand == moveJoy && currentMode.lastCommand != moveJoy && currentMode.lastCommand != movePos){
@@ -242,19 +213,8 @@ void loop()
       yAxis.run();
     }
 
-    // if (lastRecieveRS + 150 > millis() && false){
-    //   digitalWrite(fan1Pin, HIGH);
-    // }
-    // else{
-    //   digitalWrite(fan1Pin, LOW);
-    // }
-
-
   }
-
-// ?
-
-  else if (currentMode.mode == halted ){
+  else if (currentMode.mode == halted){
 
     if(currentMode.modeLast != currentMode.mode){
       xAxis.stop();
@@ -262,15 +222,31 @@ void loop()
       currentMode.modeLast = currentMode.mode;
     }
 
-  }
-
-  if (currentMode.mode == moveJoy){
-    digitalWrite(fan1Pin, HIGH);
 
   }
-  else{
-    digitalWrite(fan1Pin, LOW);
+  else if (currentMode.mode == error){
+
+    if(currentMode.modeLast != currentMode.mode){
+      xAxis.stop();
+      yAxis.stop();
+
+      delay(500);
+
+      digitalWrite(enXPin, HIGH);
+      digitalWrite(enYPin, HIGH);
+      currentMode.modeLast = currentMode.mode;
+    }
+
+
   }
+
+
+
+
+
+
+
+
 
 
 
@@ -279,14 +255,29 @@ void loop()
 }
 
 
+#ifdef debug
+void SerialWriteByteArray(uint8_t* data, uint8_t length){
+  for (uint8_t i = 0; i < length; i++){
+    Serial.write(data[i]);
+  }
+}
+#endif
+
 
 //? RS485 Protocol
-
-
 uint8_t* receiveCommandRS(){
   if (Serial1.available()) {
-    uint8_t* inData = new uint8_t[14];
-    Serial1.readBytesUntil(0xFF, inData, 15);
+  
+    uint8_t inData[14] = {NULL};
+
+    uint8_t writeNum = 0;
+    uint8_t lastRecVal = 0;
+    while (lastRecVal != 255 && writeNum < 15){
+      lastRecVal = Serial1.read();
+      inData[writeNum] = lastRecVal;
+      writeNum++;
+    }
+
     return inData;
   }
   return NULL;
@@ -297,26 +288,7 @@ uint8_t* receiveCommandRF(){
   return NULL;
 }
 
-// bool checkSumCheck(uint8_t inData[]){
 
-//   uint16_t checkSum = 0;
-//   for(int x = 0; x < 12; x++){
-//     if (inData[x] >= 255){
-//       return false;
-//     }
-//     checkSum += inData[x];
-//   }
-//   checkSum = checkSum % 256;
-
-//   if (checkSum >= 255){
-//     checkSum = 254;
-//   }
-
-//   if (inData[12] == checkSum && true){
-//     return true;
-//   }
-
-// }
 
 bool checkSumCheck(uint8_t inData[]){
 
@@ -324,10 +296,9 @@ bool checkSumCheck(uint8_t inData[]){
 
   uint16_t checkSum = 0;
   for(int x = 0; x < 12; x++){
-    // if (inData[x] >= 255){
-    //   Serial1.flush();
-    //   return false;
-    // }
+    if (inData[x] >= 255)
+      return false;
+
     checkSum += inData[x];
   }
 
@@ -338,7 +309,7 @@ bool checkSumCheck(uint8_t inData[]){
     checkSum = 254;
   }
 
-  if (inData[12] == checkSum && true){
+  if (inData[12] == checkSum){
     return true;
   }
   else{
@@ -347,13 +318,9 @@ bool checkSumCheck(uint8_t inData[]){
 
 }
 
+
 void handleInData(uint8_t inData[]){
 
-  if (inData[0] <= 10 && inData[0] > 0) {
-    digitalWrite(fan2Pin, HIGH);
-  }
-
-  
 
   currentMode.prevLastCommand = currentMode.lastCommand;
   currentMode.lastCommand = inData[1];
@@ -384,6 +351,7 @@ void handleInData(uint8_t inData[]){
   }
 
 }
+
 
 //? command functions
 
