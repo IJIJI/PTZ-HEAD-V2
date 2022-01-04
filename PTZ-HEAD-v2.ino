@@ -76,11 +76,11 @@ void setup()
   Serial.begin(115200);
 
 
-  xAxis.setMaxSpeed(5000);
+  xAxis.setMaxSpeed(2500);
   // xAxis.setMaxSpeed(750);
   xAxis.setAcceleration(4000);
 
-  yAxis.setMaxSpeed(2500);
+  yAxis.setMaxSpeed(1250);
   // xAxis.setMaxSpeed(750);
   yAxis.setAcceleration(2000);
 
@@ -330,6 +330,8 @@ bool checkSumCheck(uint8_t inData[]){
     // }
     checkSum += inData[x];
   }
+
+  // todo make 255
   checkSum = checkSum % 256;
 
   if (checkSum >= 255){
