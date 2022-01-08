@@ -15,6 +15,8 @@
 
 #define waitTimeRF 1000
 
+#define ledWaitTime 500
+
 #define fan0Pin PC9
 #define fan1Pin PA8
 #define fan2Pin PC8
@@ -72,6 +74,8 @@ struct inData {
   bool checksum = false;
 };
 
+unsigned long lastRecieveRS = 0;
+unsigned long lastRecieveRF = 0;
 
 // HardwareSerial Serial1(PIN_A10, PIN_A9);
 
@@ -82,12 +86,12 @@ void setup()
   Serial.begin(115200);
 
 
-  xAxis.setMaxSpeed(2500);
-  // xAxis.setMaxSpeed(750);
+  // xAxis.setMaxSpeed(2500);
+  xAxis.setMaxSpeed(1200);
   xAxis.setAcceleration(4000);
 
-  yAxis.setMaxSpeed(1250);
-  // xAxis.setMaxSpeed(750);
+  // yAxis.setMaxSpeed(1250);
+  yAxis.setMaxSpeed(800);
   yAxis.setAcceleration(2000);
 
 
@@ -108,18 +112,23 @@ void setup()
   // digitalWrite(enXPin, LOW);
   // digitalWrite(enYPin, LOW);
   digitalWrite(fan0Pin, HIGH);
-  digitalWrite(fan1Pin, HIGH);
+  digitalWrite(fan1Pin, HIGH); //TODO change fan pin names
   // analogWrite(fan0Pin, 255); //TODO fix analogwrite
   // analogWrite(fan1Pin, 255); //TODO fix analogwrite
 
 
   delay(1000);
+
+
+  digitalWrite(fan1Pin, LOW);
 }
 void loop()
 {
 
 
   inData inDataRS, inDataRF;
+  lastRecieveRS;
+  lastRecieveRF;
 
   // uint8_t inDataRS[15] = {NULL};
   // uint8_t inDataRF[15] = {NULL};
@@ -141,15 +150,14 @@ void loop()
       #endif
     }
 
-    if (checkSumCheck(inDataRS.data)) { //todo change if statement to checksum
-      inDataRS.lastReceived = millis();
+    if (checkSumCheck(inDataRS.data) && inDataRS.data[0] == camNum) {
+      lastRecieveRS = millis();
       inDataRS.checksum = true;
     }
   }
-  //todo add checksum here
 
 
-  if (inDataRS.lastReceived + 1000 > millis() || inDataRF.lastReceived + 1000 > millis()) {
+  if ((lastRecieveRS + ledWaitTime > millis() || lastRecieveRF + ledWaitTime > millis()) && digitalRead(fan1Pin) != HIGH) { 
     digitalWrite(fan1Pin, HIGH);
   }
   else{
@@ -167,7 +175,7 @@ void loop()
       digitalWrite(enXPin, LOW);
       digitalWrite(enYPin, LOW);
       digitalWrite(fan0Pin, HIGH);
-      digitalWrite(fan1Pin, HIGH);
+      // digitalWrite(fan1Pin, HIGH);
       currentMode.modeLast = currentMode.mode;
     }
 
@@ -302,8 +310,7 @@ bool checkSumCheck(uint8_t inData[]){
     checkSum += inData[x];
   }
 
-  // todo make 255
-  checkSum = checkSum % 256;
+  checkSum = checkSum % 255;
 
   if (checkSum >= 255){
     checkSum = 254;
