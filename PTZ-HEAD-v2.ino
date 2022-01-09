@@ -358,29 +358,29 @@ void handleInData(uint8_t inData[]){
   currentMode.lastCommand = inData[1];
   switch (inData[1])
   {
-  case 1:
+  case joyUpdateCommand:                  //1
     currentMode.mode = moveJoy;
     joyUpdate(inData[2], inData[3], inData[4], inData[5]);
     break;
   
-  case 4:
+  case writePosCommand:                   //4
     writePos(inData[2]);
     break;
   
-  case 6:
+  case callPosCommand:                    //6
     currentMode.mode = movePos;
     callPos(inData[2]);
     break;
   
-  case 7:
+  case setCoordsCommand:                  //7
     setCoords(inData[2], inData[3], inData[4], inData[5], inData[6], inData[7], inData[8], inData[9]);
     break;
   
-  case 8:
+  case callErrorCommand:                  //8
     callError(inData[2]);
     break;
 
-  case 11:
+  case setZeroCommand:                    //11
     setZero();
     break;
   }
