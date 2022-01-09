@@ -17,6 +17,16 @@
 
 #define ledWaitTime 500
 
+#define stepsPerRevolution 200*6
+
+#define X_ACCELERATION 4000
+#define Y_ACCELERATION 2000
+
+#define X_MAX_SPEED 1200
+#define Y_MAX_SPEED 800	
+
+#define EEPROM_SIZE 512
+
 #define fan0Pin PC9
 #define fan1Pin PA8
 #define fan2Pin PC8
@@ -44,6 +54,13 @@ AccelStepper xAxis(1, PA0, PC15);
 AccelStepper yAxis(1, PE5, PE6);
 
 uint8_t camNum = 1;
+
+struct vector {
+  int16_t x;
+  int16_t y;
+  // int16_t z;
+  // int16_t a;
+};
 
 enum headModeEnum {
   halted,
@@ -86,13 +103,11 @@ void setup()
   Serial.begin(115200);
 
 
-  // xAxis.setMaxSpeed(2500);
-  xAxis.setMaxSpeed(1200);
-  xAxis.setAcceleration(4000);
+  xAxis.setMaxSpeed(X_MAX_SPEED);
+  xAxis.setAcceleration(X_ACCELERATION);
 
-  // yAxis.setMaxSpeed(1250);
-  yAxis.setMaxSpeed(800);
-  yAxis.setAcceleration(2000);
+  yAxis.setMaxSpeed(Y_MAX_SPEED);
+  yAxis.setAcceleration(Y_ACCELERATION);
 
 
 
@@ -248,20 +263,13 @@ void loop()
 
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
 }
 
+
+
+
+
+//? Misc
 
 #ifdef debug
 void SerialWriteByteArray(uint8_t* data, uint8_t length){
@@ -270,6 +278,23 @@ void SerialWriteByteArray(uint8_t* data, uint8_t length){
   }
 }
 #endif
+
+// void EEPROMCheck(){
+
+//   for (int x = 0; x < EEPROM.length() && x < EEPROM_SIZE; x++){
+//     EEPROM.update(x, 0x00);
+//   }
+  
+// }
+
+
+int16_t stepToDegrees(int16_t step){
+  return step * (360 / stepsPerRevolution);
+}
+
+int16_t DegreesToStep(int16_t step){
+  return step / (360 / stepsPerRevolution);
+}
 
 
 //? RS485 Protocol
@@ -355,6 +380,9 @@ void handleInData(uint8_t inData[]){
     callError(inData[2]);
     break;
 
+  case 11:
+    setZero();
+    break;
   }
 
 }
@@ -374,15 +402,36 @@ void joyUpdate(uint8_t joyX, uint8_t joyY, uint8_t joyZ, uint8_t joyA){
 
 void writePos(uint8_t posNum){
 
-  currentMode.mode = movePos;
+  vector newPos;
+  newPos.x = stepToDegrees(xAxis.currentPosition());
+  newPos.y = stepToDegrees(yAxis.currentPosition());
+  // newPos.z = stepToDegreestep(yAxis.currentPosition());
+  // newPos.a = stepToDegreestep(yAxis.currentPosition());
+  if (5 + (posNum-1) * 4 + 4< EEPROM_SIZE)
+    EEPROM.put(5 + (posNum-1) * 4, newPos);
 
 }
 
 void callPos(uint8_t posNum){
 
+  xAxis.setMaxSpeed(X_MAX_SPEED);
+  xAxis.setAcceleration(X_ACCELERATION);
+
+  yAxis.setMaxSpeed(Y_MAX_SPEED);
+  yAxis.setAcceleration(Y_ACCELERATION);
+
+  currentMode.mode = movePos;
+
   if (posNum == 5){
     currentMode.mode = error;
   }
+
+  vector newPos;
+  if (5 + (posNum-1) * 4 + 4< EEPROM_SIZE)
+    EEPROM.get(5 + (posNum-1) * 4, newPos);
+
+  xAxis.moveTo(DegreesToStep(newPos.x));
+  yAxis.moveTo(DegreesToStep(newPos.y));
   
 }
 
@@ -392,4 +441,9 @@ void setCoords(uint8_t xPosA, uint8_t xPosB, uint8_t yPosA, uint8_t yPosB, uint8
 
 void callError(uint8_t errorNum){
 
+}
+
+void setZero(){
+  xAxis.setCurrentPosition(0);
+  yAxis.setCurrentPosition(0);
 }

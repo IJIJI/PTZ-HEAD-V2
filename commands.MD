@@ -64,16 +64,17 @@ The camera number being adressed. Value from 0 to 254.
 
 | Command            | camNum | Command Identifier |  Data 0  | Data 1 | Data 2 | Data 3 | Data 4 | Data 5 | Data 6 | Data 7 | Data 8 | Data 9 | Data 10 |        checkSum        | terminatorByte | Finished |
 | ------------------ | :----: | :----------------: | :-------: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :-----: | :---------------------: | :------------: | :------: |
-| _joyUpdate_      | 0-254 |         1         |   joyX   |  joyY  |  joyZ  |  joyA  |       |       |       |       |       |       |         | (camNum - Data10) % 256 |   255 (0xFF)   |   ✔️   |
-| _focus_          | 0-254 |         2         |           |       |       |       |       |       |       |       |       |       |         | (camNum - Data10) % 256 |   255 (0xFF)   |   ✖️   |
-| _goToCoords_     | 0-254 |         3         |   xPosA   | xPosB | yPosA | yPosB | zPosA | zPosB | aPosA | aPosB |       |       |         | (camNum - Data10) % 256 |   255 (0xFF)   |   ✖️   |
-| _writePos_       | 0-254 |         4         | posNumber |       |       |       |       |       |       |       |       |       |         | (camNum - Data10) % 256 |   255 (0xFF)   |   ✔️   |
-| _writePosCoords_ | 0-254 |         5         | posNumber | xPosA | xPosB | yPosA | yPosB | zPosA | zPosB | aPosA | aPosB |       |         | (camNum - Data10) % 256 |   255 (0xFF)   |   ✖️   |
-| _callPos_        | 0-254 |         6         | posNumber |       |       |       |       |       |       |       |       |       |         | (camNum - Data10) % 256 |   255 (0xFF)   |   ✔️   |
-| _setCoords_      | 0-254 |         7         |   xPosA   | xPosB | yPosA | yPosB | zPosA | zPosB | aPosA | aPosB |       |       |         | (camNum - Data10) % 256 |   255 (0xFF)   |   ✔️   |
-| _callError_      | 0-254 |         8         | errorNum |       |       |       |       |       |       |       |       |       |         | (camNum - Data10) % 256 |   255 (0xFF)   |   ✔️   |
-| _setLimit_       | 0-254 |         9         | limitType |       |       |       |       |       |       |       |       |       |         | (camNum - Data10) % 256 |   255 (0xFF)   |   ✖️   |
-| _home_           | 0-254 |         10         |           |       |       |       |       |       |       |       |       |       |         | (camNum - Data10) % 256 |   255 (0xFF)   |   ✖️   |
+| _joyUpdate_      | 0-254 |         1         |   joyX   |  joyY  |  joyZ  |  joyA  |        |        |        |        |        |        |        | (camNum - Data10) % 256 |   255 (0xFF)   |   ✔️   |
+| _focus_          | 0-254 |         2         |          |        |        |        |        |        |        |        |        |        |        | (camNum - Data10) % 256 |   255 (0xFF)   |   ✖️   |
+| _goToCoords_     | 0-254 |         3         |   xPosA   | xPosB | yPosA | yPosB | zPosA | zPosB | aPosA | aPosB |        |        |        | (camNum - Data10) % 256 |   255 (0xFF)   |   ✖️   |
+| _writePos_       | 0-254 |         4         | posNumber |        |        |        |        |        |        |        |        |        |        | (camNum - Data10) % 256 |   255 (0xFF)   |   ✔️   |
+| _writePosCoords_ | 0-254 |         5         | posNumber | xPosA | xPosB | yPosA | yPosB | zPosA | zPosB | aPosA | aPosB |        |        | (camNum - Data10) % 256 |   255 (0xFF)   |   ✖️   |
+| _callPos_        | 0-254 |         6         | posNumber |        |        |        |        |        |        |        |        |        |        | (camNum - Data10) % 256 |   255 (0xFF)   |   ✔️   |
+| _setCoords_      | 0-254 |         7         |   xPosA   | xPosB | yPosA | yPosB | zPosA | zPosB | aPosA | aPosB |        |        |        | (camNum - Data10) % 256 |   255 (0xFF)   |   ✖️   |
+| _callError_      | 0-254 |         8         | errorNum |        |        |        |        |        |        |        |        |        |        | (camNum - Data10) % 256 |   255 (0xFF)   |   ✖️   |
+| _setLimit_       | 0-254 |         9         | limitType |        |        |        |        |        |        |        |        |        |        | (camNum - Data10) % 256 |   255 (0xFF)   |   ✖️   |
+| _home_           | 0-254 |         10         |          |        |        |        |        |        |        |        |        |        |        | (camNum - Data10) % 256 |   255 (0xFF)   |   ✖️   |
+| setZero            | 0-254 |         11         |          |        |        |        |        |        |        |        |        |        |        | (camNum - Data10) % 256 |   255 (0xFF)   |   ✔️   |
 
 </br>
 
@@ -116,8 +117,8 @@ WIP
 
 Moves the head to coordinates. Coordinates are divided over two bytes, A and B bytes. As there is a limit of 254 per byte, there are only 7 usable bytes. The function stacks the first seven bits of both bytes to create a 14 bit value.
 
-If bit    A = `<span style="color:pink"><s>`0`</s>`1101010
-and bit   B = `<span style="color:lightblue"><s>`0`</s>`0111011 it will combine to `<span style="color:lightblue">`0111011`<span style="color:pink">`1101010
+If bit    A = `<span style="color:pink"><s>`0 `</s>`1101010
+and bit   B = `<span style="color:lightblue"><s>`0 `</s>`0111011 it will combine to `<span style="color:lightblue">`0111011 `<span style="color:pink">`1101010
 
 ### **writePos (4):**
 

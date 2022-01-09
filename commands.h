@@ -14,6 +14,7 @@ const byte setCoordsCommand       =   B00000111;  //! WIP
 const byte callErrorCommand       =   B00001000;
 const byte setLimitCommand        =   B00001001;  //! WIP
 const byte homeCommand            =   B00001010;  //! WIP TODO add home types
+const byte setZeroCommand         =   B00001011;  //TODO add axis types
 
 
 const byte terminatorByte         =   0xFF;
