@@ -341,7 +341,7 @@ bool checkSumCheck(uint8_t inData[]){
     checkSum = 254;
   }
 
-  if (inData[12] == checkSum){
+  if (inData[12] == checkSum){ //TODO CHECK ZIS cus command is not long enough
     return true;
   }
   else{
@@ -422,13 +422,18 @@ void callPos(uint8_t posNum){
 
   currentMode.mode = movePos;
 
-  if (posNum == 5){
-    currentMode.mode = error;
+  vector newPos;
+
+  if (posNum == 0){
+    newPos.x = 0;
+    newPos.y = 0;
+  }
+  else{
+    if (5 + (posNum-1) * 4 + 4< EEPROM_SIZE)
+      EEPROM.get(5 + (posNum-1) * 4, newPos);
   }
 
-  vector newPos;
-  if (5 + (posNum-1) * 4 + 4< EEPROM_SIZE)
-    EEPROM.get(5 + (posNum-1) * 4, newPos);
+  
 
   xAxis.moveTo(DegreesToStep(newPos.x));
   yAxis.moveTo(DegreesToStep(newPos.y));
