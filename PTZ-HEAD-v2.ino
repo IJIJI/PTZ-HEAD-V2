@@ -79,7 +79,7 @@ void setup()
   pinMode(fan0Pin, OUTPUT);
   pinMode(fan1Pin, OUTPUT);
 
-  delay(500);
+  delay(750);
 
   currentMode.mode = standby;
 
